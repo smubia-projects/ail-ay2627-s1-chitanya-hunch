@@ -10,3 +10,4 @@ output/
 *.log
 *.db
 *.sqlite*
+!.env.example
