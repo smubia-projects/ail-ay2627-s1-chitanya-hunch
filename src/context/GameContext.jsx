@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { apiUrl } from '../api';
 
 const GameContext = createContext();
+const pollDelay = room => (!room ? 2000 : room.finished ? 20000 : room.lobby ? 3000 : 2000);
 const SESSION_KEY = 'hunch_session_v1';
 // Carry sessions over from before the rename so players in an ongoing game stay signed in.
 try {
@@ -49,22 +51,27 @@ export function GameProvider({ children }) {
     const refresh = async () => {
       const startedAt = generation.current;
       try {
-        const response = await fetch(`/api/rooms/${session.code}`, { headers: { Authorization: `Bearer ${session.token}` }, signal: AbortSignal.timeout(6000) });
+        const response = await fetch(apiUrl(`/api/rooms/${session.code}`), { headers: { Authorization: `Bearer ${session.token}` }, signal: AbortSignal.timeout(6000) });
         const data = await response.json();
         if (cancelled || startedAt !== generation.current) return;
         // 410: the host ended the game, so everyone goes home.
         if (response.status === 401 || response.status === 404 || response.status === 410) { forget(session.code); setSession(null); setRoom(null); setError(data.error); return; }
         if (!response.ok) throw new Error(data.error);
-        setRoom(data); setConnected(true);
+        setRoom(data); setConnected(true); latest = data;
       } catch { if (!cancelled) setConnected(false); }
-      finally { if (!cancelled) timer = setTimeout(refresh, 1000); }
+      finally { if (!cancelled && !document.hidden) timer = setTimeout(refresh, pollDelay(latest)); }
     };
+    // Every poll is a request to the API (on Cloud Run it keeps an instance awake), so poll only as fast as the
+    // game needs: 2 s during rounds, slower in the lobby and after the game, and not at all in a hidden tab.
+    let latest = null;
+    const onVisible = () => { if (!document.hidden && !cancelled) { clearTimeout(timer); refresh(); } };
+    document.addEventListener('visibilitychange', onVisible);
     refresh();
-    return () => { cancelled = true; clearTimeout(timer); };
+    return () => { cancelled = true; clearTimeout(timer); document.removeEventListener('visibilitychange', onVisible); };
   }, [session]);
 
   const request = async (path, body, authenticated = false) => {
-    const response = await fetch(path, { method: 'POST', headers: {
+    const response = await fetch(apiUrl(path), { method: 'POST', headers: {
       'Content-Type': 'application/json', ...(authenticated ? { Authorization: `Bearer ${session.token}` } : {}) },
       body: JSON.stringify(body), signal: AbortSignal.timeout(8000) });
     const data = await response.json();

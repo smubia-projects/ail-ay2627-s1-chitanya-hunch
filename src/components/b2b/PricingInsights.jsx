@@ -1,3 +1,4 @@
+import { apiUrl } from '../../api';
 import { useState, useEffect } from 'react';
 import { useGame } from '../../context/GameContext';
 import { ResearchReport, downloadCsv } from './ResearchReport';
@@ -10,7 +11,7 @@ export function PricingInsights() {
   useEffect(() => {
     const controller = new AbortController();
     setError('');
-    fetch(`/api/rooms/${session.code}/insights`, { headers: { Authorization: `Bearer ${session.token}` }, signal: controller.signal })
+    fetch(apiUrl(`/api/rooms/${session.code}/insights`), { headers: { Authorization: `Bearer ${session.token}` }, signal: controller.signal })
       .then(async r => { const data = await r.json(); if (!r.ok) throw new Error(data.error); return data; })
       .then(setReport).catch(e => { if (e.name !== 'AbortError') setError(e.message); });
     return () => controller.abort();

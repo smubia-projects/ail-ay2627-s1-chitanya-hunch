@@ -1,3 +1,4 @@
+import { apiUrl } from '../../api';
 import { money } from '../leaderboard/LeaderboardView';
 
 const signed = value => `${value > 0 ? '+' : ''}${value}%`;
@@ -17,7 +18,7 @@ export function ResearchReport({ report, emptyMessage }) {
 }
 
 export async function downloadCsv(path, headers, filename) {
-  const response = await fetch(path, { headers });
+  const response = await fetch(apiUrl(path), { headers });
   if (!response.ok) throw new Error('Export failed. Try again.');
   const url = URL.createObjectURL(await response.blob()); const a = document.createElement('a'); a.href = url; a.download = filename; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
