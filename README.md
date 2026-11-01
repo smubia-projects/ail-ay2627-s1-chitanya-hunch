@@ -2,6 +2,32 @@
 
 A multiplayer price-guessing game. The host creates a room, friends join by name and room code, and everyone submits one private guess per product. The host reveals the stored retail price and the nearest guesses win. Equal distances share a rank; both overestimates and underestimates count.
 
+## SMU BIA AI Lodge showcase version
+
+This fork is deployed by the club as a public demo:
+
+- **Site** (repo root, Vercel): the React game and the Insights page. It calls the API at `VITE_API_BASE`.
+- **API** (`server/`, Cloud Run): rooms, guesses, scoring, research reports and the AI analyst. Plain Node `http`,
+  no framework. State lives in **Neon Postgres** (`DATABASE_URL`), keyed by room codes and random player tokens:
+  there are no accounts. Without `DATABASE_URL` it falls back to PGlite in `.game-data/` (local development only).
+- **Insights** (`/insights`): a public page over the published studies. `HUNCH_SEED_DEMO=on` loads a synthetic demo
+  study (about 300 respondents) once on a fresh database. Ask the **AI analyst** about it: an agent that picks which
+  analyses to run (OpenAI-format tool calls through the club gateway: `API_BASE_URL`, `API_KEY`, `MODEL_NAME`) and only
+  quotes numbers its tools returned. Each visitor gets a few questions (shared limiter, bucket `ask`); past the limit
+  a card links to AI Lodge.
+- Rooms poll the API every 2 s during rounds (3 s in the lobby, 20 s after the game, paused in hidden tabs).
+
+Not in this version: the company research portal and its magic-link / prototype sign-in, and the Vercel function
+(`api/handler.js`). Research opt-in still works, but reports are shown on the public Insights page as a demo and are
+not sold or shared with companies. See `docs/commercial-plan.md` for the student's business idea.
+
+```sh
+cp .env.example .env          # DATABASE_URL empty = local PGlite; add API_KEY for the analyst
+npm install && npm run dev    # game server on 3001 + Vite on 5173 (Vite proxies /api)
+npm test                      # 53 tests, no network or key needed
+```
+The API image builds from `server/` (`server/Dockerfile`), and `.github/workflows/deploy.yml` deploys it.
+
 ## Run locally
 
 ```sh
@@ -33,22 +59,13 @@ This is a local-network app, not an internet deployment. Publishing the static `
 
 ## Commercial research preview
 
-Players can optionally opt in to aggregate pricing reports that may be sold to companies. Playing is available without research consent. Existing data is excluded; opting in affects future guesses only. Opted-in players can also answer an optional, separate maximum-pay question before price reveal. Zero means they would not buy the item.
+Players can optionally opt in to anonymous, aggregate price-perception reports (shown on the public Insights page in this showcase). Playing is available without research consent. Existing data is excluded; opting in affects future guesses only. Opted-in players can also answer an optional, separate maximum-pay question before price reveal. Zero means they would not buy the item.
 
 The host's **Insights** tab reports only revealed rounds from their own room. Each product or metric needs at least five opted-in responses before publication. It shows median perceived price, interquartile range, median bias against the demo benchmark, and a stated maximum-pay median if enough optional responses exist. CSV exports include aggregate rows only. The threshold is a disclosure precaution, not guaranteed anonymity or sufficient evidence for pricing decisions. These are self-selected responses; maximum-pay answers are hypothetical and must not be presented as observed sales or estimated demand curves.
 
-### Company research portal
+### Company research portal (not in the showcase)
 
-Companies buying research get a pooled report across every game on the server, so rooms too small to publish alone still contribute once combined. Each buyer receives its own access key, configured on the server:
-
-```sh
-# Generate a key per company
-node -e "console.log(require('crypto').randomBytes(24).toString('hex'))"
-# PowerShell: $env:RESEARCH_BUYER_KEYS = "acme:<key>,beta-foods:<key>"
-RESEARCH_BUYER_KEYS="acme:<key>,beta-foods:<key>" npm run dev
-```
-
-Companies open `/?portal=company`, enter their key and optionally filter by category. The report adds **category price perception**: each response compared with its own product's benchmark, giving the median over/under-estimate and the stated maximum pay relative to benchmark for each category. The same consent gate, revealed-round rule and minimum-five suppression apply. API: `GET /api/research/report[.csv]?category=Tech` with `Authorization: Bearer <key>`. Player session tokens are never accepted. Every pull is appended to `.game-data/research-access.log` (buyer, time, format, category), so you can answer which companies received data. Remove a buyer from `RESEARCH_BUYER_KEYS` and restart to revoke access. With no keys configured the endpoint is disabled.
+The original version had a company portal with per-company sign-in. The showcase replaces it with the public Insights page described at the top.
 
 Research preferences can be changed in Profile, even after a game finishes. Withdrawal removes the player's research records from future reports in that room, but does not delete their game guesses or recall previously exported reports. Research events store submission time and consent version. Room state is local, single-server JSON storage. Before a paid launch, implement operator/customer accounts, scoped access to pooled studies, deduplicated recruitment, production storage, and a documented retention policy. Public internet deployment is separate from the local Wi-Fi setup.
 
