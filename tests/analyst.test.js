@@ -17,8 +17,9 @@ async function demoReport() {
     { study: { company: 'Demo Co', title: 'Demo study', startsOn: '2000-01-01', endsOn: '2999-12-31', productIds: ['prod_1', 'prod_7', 'item_009'] } });
   return studyReport(db, await studyById(db, studyId));
 }
-const call = (name, args = {}, id) => ({ role: 'model', parts: [{ functionCall: { name, args, ...(id ? { id } : {}) } }] });
-const say = text => ({ role: 'model', parts: [{ text }] });
+// OpenAI-format assistant messages, as the gateway returns them.
+const call = (name, args = {}, id = 'c0') => ({ role: 'assistant', content: null, tool_calls: [{ id, type: 'function', function: { name, arguments: JSON.stringify(args) } }] });
+const say = text => ({ role: 'assistant', content: text });
 
 test('analyst runs the tools the model asks for, feeds results back, and returns the answer', async () => {
   const report = await demoReport();
@@ -26,16 +27,20 @@ test('analyst runs the tools the model asks for, feeds results back, and returns
   const seen = [];
   const events = [];
   const { answer, steps } = await runAnalyst({ report, question: 'Which product is undervalued?', onEvent: e => events.push(e),
-    callModel: async ({ contents, tools }) => { seen.push({ contents: structuredClone(contents), tools }); return script.shift(); } });
+    callModel: async ({ messages, tools }) => { seen.push({ messages: structuredClone(messages), tools }); return script.shift(); } });
 
   assert.equal(answer, '**Shoppers undervalue the headphones.**');
   assert.deepEqual(steps.map(s => s.tool), ['get_study_overview', 'get_product_insights']);
   assert.deepEqual(events.map(e => e.type), ['step', 'step', 'answer']);
   // Each tool result goes back to the model with the call's id, and the product lookup matched by name.
-  const reply = seen[2].contents.at(-1).parts[0].functionResponse;
-  assert.equal(reply.id, 'c2');
-  assert.match(reply.response.result.name, /Sony/);
-  assert.ok(reply.response.result.guesses.median.startsWith('S$'));
+  const reply = seen[2].messages.at(-1);
+  assert.equal(reply.role, 'tool');
+  assert.equal(reply.tool_call_id, 'c2');
+  const { result } = JSON.parse(reply.content);
+  assert.match(result.name, /Sony/);
+  assert.ok(result.guesses.median.startsWith('S$'));
+  // The assistant's tool-call message is sent back before the results, as the API requires.
+  assert.equal(seen[2].messages.at(-2).tool_calls[0].id, 'c2');
   // Nothing individual reaches the model: no respondent ids anywhere in what it was sent.
   assert.doesNotMatch(JSON.stringify(seen), /respondentId|respondent_id/);
 });
