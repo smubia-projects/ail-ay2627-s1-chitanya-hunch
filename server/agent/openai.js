@@ -2,7 +2,7 @@
 // Environment: API_BASE_URL (default the club's gateway), API_KEY and MODEL_NAME. The older GEMINI_API_KEY and
 // GEMINI_MODEL names are still read as fallbacks.
 
-export const DEFAULT_MODEL = 'gemini-3.5-flash-lite';
+export const DEFAULT_MODEL = 'deepseek-v4-flash';
 export const aiModel = () => process.env.MODEL_NAME || process.env.GEMINI_MODEL || DEFAULT_MODEL;
 const baseUrl = () => (process.env.API_BASE_URL || 'https://api.apiyi.com/v1').replace(/\/+$/, '');
 const apiKey = () => process.env.API_KEY || process.env.GEMINI_API_KEY || '';
