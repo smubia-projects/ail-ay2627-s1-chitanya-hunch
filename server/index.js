@@ -4,6 +4,8 @@ import { openDb, defaultTarget } from './db/index.js';
 import { createHandler } from './app.js';
 import { seedCount, seedDemo } from './db/seed.js';
 
+// Rooms and guesses are shared by every player, so production needs Postgres (Neon); PGlite is for local play only.
+if (process.env.K_SERVICE && !process.env.DATABASE_URL) throw new Error('DATABASE_URL is required on Cloud Run (a Neon Postgres URL).');
 // HUNCH_SEED_DEMO=on loads the synthetic demo study once, so the public Insights tab has data on a fresh database.
 const ready = openDb(defaultTarget()).then(async db => {
   if (process.env.HUNCH_SEED_DEMO === 'on' && !(await seedCount(db))) console.log('Seeded the demo study:', await seedDemo(db));
