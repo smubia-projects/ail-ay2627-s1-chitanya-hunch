@@ -1,12 +1,12 @@
 import { TOOLS, runTool } from './tools.js';
-import { callGemini } from './gemini.js';
+import { callModel as callGateway } from './openai.js';
 
-// The Hunch analyst: a tool-using agent. Gemini decides which analyses to run, the server runs them on the study
-// report, the results go back to Gemini, and it repeats until it writes an answer. Every number in the answer has to
+// The Hunch analyst: a tool-using agent. The model decides which analyses to run, the server runs them on the study
+// report, the results go back to the model, and it repeats until it writes an answer. Every number in the answer has to
 // come from a tool result, so the statistics stay the code's, not the model's.
 
 export const MAX_STEPS = 8;        // model turns before we stop and ask for an answer with what it has
-const TIME_BUDGET_MS = 60000;      // after this, the next turn must answer; resellers like APIYI take 10-15 s a call
+const TIME_BUDGET_MS = 60000;      // after this, the next turn must answer; gateways like APIYI take 10-15 s a call
 
 export const SYSTEM_PROMPT = `You are Hunch's pricing research analyst. You answer a client's questions about one price-perception study.
 
@@ -27,34 +27,36 @@ const clean = text => String(text ?? '').replace(/\s+\n/g, '\n').trim();
 
 // history: earlier turns of this conversation, [{ role: 'user' | 'model', text }]. Text only: tool results are
 // re-fetched each question, so stale numbers are never carried over.
-export async function runAnalyst({ report, question, history = [], onEvent = () => {}, callModel = callGemini, now = Date.now }) {
+export async function runAnalyst({ report, question, history = [], onEvent = () => {}, callModel = callGateway, now = Date.now }) {
   const started = now();
-  const contents = [
-    ...history.map(turn => ({ role: turn.role === 'model' ? 'model' : 'user', parts: [{ text: turn.text }] })),
-    { role: 'user', parts: [{ text: question }] },
+  // OpenAI-format chat: earlier turns as text, then the question; tool calls and results are appended as they happen.
+  const messages = [
+    ...history.map(turn => ({ role: turn.role === 'model' ? 'assistant' : 'user', content: turn.text })),
+    { role: 'user', content: question },
   ];
   const steps = [];
   for (let turn = 0; turn < MAX_STEPS; turn++) {
     const outOfTime = now() - started > TIME_BUDGET_MS;
     const lastTurn = turn === MAX_STEPS - 1 || outOfTime;
     // On the last turn, offer no tools so the model has to answer with what it has.
-    const content = await callModel({ system: SYSTEM_PROMPT, contents, tools: lastTurn ? [] : TOOLS });
-    contents.push(content);
-    const calls = content.parts.filter(p => p.functionCall).map(p => p.functionCall);
+    const message = await callModel({ system: SYSTEM_PROMPT, messages, tools: lastTurn ? [] : TOOLS });
+    const calls = message.tool_calls ?? [];
     if (!calls.length) {
-      const answer = clean(content.parts.filter(p => p.text && !p.thought).map(p => p.text).join(''));
+      const answer = clean(message.content);
       if (!answer) throw Object.assign(new Error('The analyst finished without an answer. Try rephrasing the question.'), { status: 502 });
       onEvent({ type: 'answer', text: answer });
       return { answer, steps };
     }
-    const responses = calls.map(call => {
-      const result = runTool(report, call.name, call.args);
-      const step = { tool: call.name, args: call.args ?? {}, ok: !result.error };
+    messages.push({ ...message, role: 'assistant' });
+    for (const call of calls) {
+      let args = {};
+      try { args = JSON.parse(call.function?.arguments || '{}') ?? {}; } catch { /* bad JSON: the tool reports what is missing */ }
+      const result = runTool(report, call.function?.name, args);
+      const step = { tool: call.function?.name, args, ok: !result.error };
       steps.push(step);
       onEvent({ type: 'step', ...step });
-      return { functionResponse: { ...(call.id ? { id: call.id } : {}), name: call.name, response: { result } } };
-    });
-    contents.push({ role: 'user', parts: responses });
+      messages.push({ role: 'tool', tool_call_id: call.id, content: JSON.stringify({ result }) });
+    }
   }
   throw Object.assign(new Error('The analyst ran out of steps. Try a narrower question.'), { status: 502 });
 }

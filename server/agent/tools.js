@@ -93,7 +93,7 @@ function methodology(report) {
   return typeof m === 'string' ? { summary: m } : { ...m, minimumGroupSizes: report.thresholds };
 }
 
-// Gemini function declarations (OpenAPI-style schemas) and the code that answers each one.
+// Tool definitions (JSON-schema parameters, sent as OpenAI-format function tools) and the code that answers each one.
 export const TOOLS = [
   { name: 'get_study_overview', description: 'Study title, dates, sample size and a one-line summary of every product (median guess vs real price). Call this first.',
     parameters: { type: 'object', properties: {} }, run: overview },
