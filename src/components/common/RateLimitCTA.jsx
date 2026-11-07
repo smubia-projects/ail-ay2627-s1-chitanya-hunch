@@ -11,7 +11,7 @@ const PROJECT_CTA = {
   accentColor: '#E8590C',
   headline: "You've grilled the analyst!",
   description:
-    'You asked the Hunch AI analyst {count} questions, its limit for now. Each answer runs several analyses on the study before it writes. Want to build AI apps like this one? Join us, or run your own copy from GitHub.',
+    'Want to build AI that reads pricing research and tells founders what customers will actually pay? Every AI Lodge cohort ends with a showcase where teams present what they actually shipped.',
   programme: 'AI Lodge',
   programmeLink: 'https://www.smubia.com/ailodge',
   githubLink: 'https://github.com/smubia-projects/ail-ay2627-s1-chitanya-hunch',
