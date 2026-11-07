@@ -1,3 +1,4 @@
+import { apiUrl } from '../../api';
 import { useState } from 'react';
 import { ArrowRight, Check, Copy, Users } from 'lucide-react';
 import { useGame } from '../../context/GameContext';
@@ -21,7 +22,7 @@ export function PlayView({ onOpenLeaderboard }) {
   const copyInvite = async () => {
     const url = new URL(window.location.href); url.search = ''; url.searchParams.set('room', room.code);
     if (['localhost', '127.0.0.1'].includes(url.hostname)) {
-      try { const response = await fetch('/api/network'); const { hosts } = await response.json(); if (hosts?.length) url.hostname = hosts[0]; } catch { /* Room code remains available if network lookup fails. */ }
+      try { const response = await fetch(apiUrl('/api/network')); const { hosts } = await response.json(); if (hosts?.length) url.hostname = hosts[0]; } catch { /* Room code remains available if network lookup fails. */ }
     }
     setInvite(url.href);
     try { await navigator.clipboard.writeText(url.href); setCopied(true); setTimeout(() => setCopied(false), 2000); }

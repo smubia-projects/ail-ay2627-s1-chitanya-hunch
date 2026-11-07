@@ -1,4 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
+import { apiUrl } from '../api';
+import { RateLimitCTA, DemoPausedNotice } from '../components/common/RateLimitCTA';
 import { ArrowRight, Check, Sparkles, X } from 'lucide-react';
 
 const SUGGESTIONS = [
@@ -32,17 +34,18 @@ function Answer({ text }) {
   return <div className="hi-ask-answer">{blocks.map((b, i) => (b.type === 'ul' ? <ul key={i}>{b.items.map((item, j) => <li key={j}>{inline(item)}</li>)}</ul> : <p key={i}>{inline(b.text)}</p>))}</div>;
 }
 
-export function AskAnalyst({ session, study, onExpired }) {
+export function AskAnalyst({ study }) {
   const [status, setStatus] = useState(null);
   const [turns, setTurns] = useState([]);
   const [question, setQuestion] = useState('');
+  const [limit, setLimit] = useState(null); // { status: 429, count } shows the CTA, { status: 503, message } the paused notice
   const busy = turns.some(t => t.pending);
   const endRef = useRef(null);
 
   useEffect(() => {
-    fetch('/api/insights/agent', { headers: { Authorization: `Bearer ${session.token}` } })
+    fetch(apiUrl('/api/insights/agent'))
       .then(r => r.json()).then(setStatus).catch(() => setStatus({ enabled: false }));
-  }, [session.token]);
+  }, []);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, [turns]);
 
   const update = (index, change) => setTurns(all => all.map((t, i) => (i === index ? { ...t, ...change(t) } : t)));
@@ -55,9 +58,14 @@ export function AskAnalyst({ session, study, onExpired }) {
     setTurns(all => [...all, { question: q, steps: [], answer: '', error: '', pending: true }]);
     setQuestion('');
     try {
-      const response = await fetch(`/api/insights/studies/${study.id}/ask`, { method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.token}` }, body: JSON.stringify({ question: q, history }) });
-      if (response.status === 401) { onExpired(); return; }
+      const response = await fetch(apiUrl(`/api/insights/studies/${study.id}/ask`), { method: 'POST',
+        headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: q, history }) });
+      if (response.status === 429 || response.status === 503) {
+        const data = await response.json().catch(() => ({}));
+        setLimit({ status: response.status, count: data.queries_used, message: data.message });
+        setTurns(all => all.slice(0, index)); // not answered: the CTA or paused notice explains why
+        return;
+      }
       if (!response.ok) { const data = await response.json().catch(() => ({})); throw new Error(data.error || 'The analyst could not answer. Try again.'); }
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -87,9 +95,9 @@ export function AskAnalyst({ session, study, onExpired }) {
       <span className="hi-ask-badge" aria-hidden="true"><Sparkles size={20} /></span>
       <div><p className="hi-eyebrow">AI ANALYST</p><h2>Ask Hunch about this study</h2></div>
     </header>
-    <p className="hi-note">An AI agent (Google Gemini) picks which analyses to run, runs them on this study’s data, and writes up what it finds. It only quotes numbers it looked up, and it can’t see anything the report withholds.</p>
+    <p className="hi-note">An AI agent picks which analyses to run, runs them on this study’s data, and writes up what it finds. It only quotes numbers it looked up, and it can’t see anything the report withholds.</p>
 
-    {status && !status.enabled && <p className="hi-banner" role="note"><strong>Not set up yet.</strong> Add <code>GEMINI_API_KEY=your-key</code> to <code>.env</code> and restart the server.</p>}
+    {status && !status.enabled && <p className="hi-banner" role="note"><strong>Not set up yet.</strong> Add <code>API_KEY</code> to the server’s <code>.env</code> and restart it.</p>}
 
     {turns.map((t, i) => <article key={i} className="hi-ask-turn">
       <p className="hi-ask-question">{t.question}</p>
@@ -110,5 +118,7 @@ export function AskAnalyst({ session, study, onExpired }) {
         placeholder={turns.length ? 'Ask a follow-up…' : 'e.g. Why do people underestimate our headphones?'} />
       <button className="hi-button" disabled={!status?.enabled || busy || !question.trim()}><span>{busy ? 'Thinking' : 'Ask'}</span><ArrowRight size={18} /></button>
     </form>
+    {limit?.status === 429 && <RateLimitCTA queriesMade={limit.count ?? 0} onDismiss={() => setLimit(null)} />}
+    {limit?.status === 503 && <DemoPausedNotice message={limit.message} onDismiss={() => setLimit(null)} />}
   </section>;
 }
