@@ -3,12 +3,13 @@ import { createHash } from 'node:crypto';
 const sha256 = text => createHash('sha256').update(text).digest('hex');
 
 // Bump CONSENT_VERSION whenever CONSENT_TEXT changes; players on an older version are asked again.
-export const CONSENT_VERSION = 'hunch-research-v2';
+export const CONSENT_VERSION = 'hunch-research-v3-showcase';
+// Who the full product would serve. In this showcase no reports are sold or shared with anyone.
 export const BUYER_CATEGORIES = ['consumer brands', 'retailers', 'market-research and marketing agencies'];
 export const CONSENT_TEXT = [
   'I am 18 or older.',
   'I agree that Hunch may use my price guesses, my optional "most I\'d pay" and "too cheap to trust" answers, and how long I take to answer, in aggregate price-perception reports (Hunch Insights).',
-  `Hunch sells these reports to ${BUYER_CATEGORIES.join(', ')}.`,
+  'This is a student showcase: the reports appear on Hunch’s public Insights page as a demo, and are not sold or shared with companies.',
   'After opting in I may be asked four optional profile questions, once: age band, gender, region and how often I shop online. Each has "prefer not to say".',
   'Reports never include my name, room code or individual answers. They only show groups of at least 5 people, or 10 for breakdowns such as age band.',
   'I can play without opting in. If I withdraw in Profile, my research answers and profile are deleted and drop out of reports when they next refresh. Reports already downloaded cannot be recalled.',

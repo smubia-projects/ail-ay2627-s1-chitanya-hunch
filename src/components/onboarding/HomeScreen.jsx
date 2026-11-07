@@ -34,7 +34,7 @@ export function HomeScreen() {
       <label className="research-optin">
         <input type="checkbox" checked={researchConsent} onChange={e => setResearchConsent(e.target.checked)} disabled={busy} />
         <span><strong>Count my guesses in pricing research</strong> <small>I’m 18 or older. Optional, and it doesn’t change the game.</small>
-          <details><summary>What this means</summary><small>Your guesses and optional answers are used in aggregate pricing reports that may be sold to companies. Reports never include names or room codes. You can withdraw any time in Profile; reports already downloaded can’t be recalled.</small></details></span>
+          <details><summary>What this means</summary><small>Your guesses and optional answers count towards anonymous, aggregate price-perception reports on the public Insights page. This is a student showcase: nothing is sold or shared with companies. Reports never include names or room codes. You can withdraw any time in Profile; reports already downloaded can’t be recalled.</small></details></span>
       </label>
     </div>
 
@@ -69,9 +69,9 @@ export function HomeScreen() {
 
       {!invited && <a className="home-card home-company" href="/insights">
         <BarChart3 size={28} aria-hidden="true" />
-        <h2>For companies</h2>
-        <p>See the research dashboard: what shoppers think your products cost, and what they’d pay.</p>
-        <span className="home-link">Open Hunch Insights <ArrowRight size={18} /></span>
+        <h2>Hunch Insights</h2>
+        <p>See what the crowd thinks products cost, and ask the AI analyst about a demo study.</p>
+        <span className="home-link">Open Insights <ArrowRight size={18} /></span>
       </a>}
     </div>
     {!ready && <p className="caption home-hint">Enter your name to play.</p>}

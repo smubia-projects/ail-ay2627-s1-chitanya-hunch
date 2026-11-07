@@ -36,7 +36,7 @@ test('two independent phone sessions share guesses, reveal, rankings and next ro
     assert.equal(another.data.room.players.length, 1);
     assert.equal((await request(`/api/rooms/${another.data.session.code}`, undefined, guestToken)).status, 401);
     const consent = await request('/api/consent');
-    assert.equal(consent.data.version, 'hunch-research-v2'); assert.match(consent.data.text, /18 or older/);
+    assert.equal(consent.data.version, 'hunch-research-v3-showcase'); assert.match(consent.data.text, /18 or older/);
   } finally { await server.stop(); }
 });
 

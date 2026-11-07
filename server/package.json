@@ -1,0 +1,14 @@
+{
+  "name": "hunch-api",
+  "private": true,
+  "type": "module",
+  "description": "Hunch API for Cloud Run (the image installs only these; the root package.json is the Vercel frontend and local dev)",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "@upstash/redis": "^1.34.3",
+    "pg": "^8.23.1"
+  }
+}

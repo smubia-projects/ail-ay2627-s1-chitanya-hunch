@@ -44,8 +44,9 @@ export async function playRound(db, code, host, players, guessFor, extra = () =>
   return price;
 }
 
+// A local .env may turn on demo seeding or set a key; tests start from neither unless they say so.
 export async function startServer(env = {}) {
-  const child = spawn(process.execPath, ['server/index.js'], { env: { ...process.env, GAME_PORT: '0', GAME_EPHEMERAL: '1', ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
+  const child = spawn(process.execPath, ['server/index.js'], { env: { ...process.env, GAME_PORT: '0', GAME_EPHEMERAL: '1', HUNCH_SEED_DEMO: 'off', API_KEY: '', ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
   let output = '';
   child.stdout.on('data', chunk => { output += chunk; });
   const base = await new Promise((resolve, reject) => {
