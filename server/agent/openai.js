@@ -2,7 +2,7 @@
 // Environment: API_BASE_URL (default the club's gateway), API_KEY and MODEL_NAME. The older GEMINI_API_KEY and
 // GEMINI_MODEL names are still read as fallbacks.
 
-export const DEFAULT_MODEL = 'deepseek-v4-flash';
+export const DEFAULT_MODEL = 'deepseek-v4-1-flash-260910';
 export const aiModel = () => process.env.MODEL_NAME || process.env.GEMINI_MODEL || DEFAULT_MODEL;
 const baseUrl = () => (process.env.API_BASE_URL || 'https://api.apiyi.com/v1').replace(/\/+$/, '');
 const apiKey = () => process.env.API_KEY || process.env.GEMINI_API_KEY || '';
@@ -27,6 +27,8 @@ export async function callModel({ system, messages, tools, timeoutMs = 40000 }) 
         model: aiModel(),
         messages: [{ role: 'system', content: system }, ...messages],
         ...(tools.length ? { tools: tools.map(({ name, description, parameters }) => ({ type: 'function', function: { name, description, parameters } })) } : {}),
+        // DeepSeek thinks first by default; each agent turn has a timeout, so thinking is off for it.
+        ...(/deepseek/i.test(aiModel()) ? { reasoning_effort: 'none' } : {}),
       }),
       signal: AbortSignal.timeout(timeoutMs),
     });

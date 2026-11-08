@@ -12,7 +12,7 @@ This fork is deployed by the club as a public demo:
   there are no accounts. Without `DATABASE_URL` it falls back to PGlite in `.game-data/` (local development only).
 - **Insights** (`/insights`): a public page over the published studies. `HUNCH_SEED_DEMO=on` loads a synthetic demo
   study (about 300 respondents) once on a fresh database. Ask the **AI analyst** about it: an agent that picks which
-  analyses to run (OpenAI-format tool calls through the club gateway: `API_BASE_URL`, `API_KEY`, `MODEL_NAME`, default `deepseek-v4-flash`) and only
+  analyses to run (OpenAI-format tool calls through the club gateway: `API_BASE_URL`, `API_KEY`, `MODEL_NAME`, default `deepseek-v4-1-flash-260910`) and only
   quotes numbers its tools returned. Each visitor gets a few questions (shared limiter, bucket `ask`); past the limit
   a card links to AI Lodge.
 - Rooms poll the API every 2 s during rounds (3 s in the lobby, 20 s after the game, paused in hidden tabs).
